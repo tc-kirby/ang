@@ -1,0 +1,22 @@
+body, select, input {
+    font-family: 'Abel';font-size: 22px;
+}
+
+input {
+    font-family: 'Abel';font-size: 22px;
+}
+
+#everything {
+    width: 100%;
+    text-align: center;
+}
+
+#form_part {
+    padding: 5px;
+}
+
+ul {
+    list-style-type: none; /* Remove bullets */
+    padding: 0; /* Remove padding */
+    margin: 0; /* Remove margins */
+}

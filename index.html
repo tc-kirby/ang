@@ -1,0 +1,112 @@
+<html>
+    <head>
+        <script src = "./ang.js"></script>
+        <script src = "./dict.js"></script>
+
+        <link rel="stylesheet" href="style.css">
+        <link href='https://fonts.googleapis.com/css?family=Abel' rel='stylesheet'>
+
+        <script>
+            function button_click() {
+                var start_time = new Date().getTime();
+
+                var phrase = document.getElementById("user_input").value;
+                var mw_value = document.getElementById("max_words_dropdown").value;
+                if(mw_value != 'unlimited') {
+                    var max_words = parseInt(mw_value);
+                }
+                else {
+                    var max_words = null;
+                }
+
+                document.getElementById("output_list").innerHTML = ""; // clear the output list space
+
+                let root_node = new ang_trie_node(null, null, get_map(prep_string(phrase))); // make the root node
+
+                let dict_words = get_words();
+
+                // set up the root node
+                var root_node_start_time = new Date().getTime();
+                for (const w of dict_words) { // for every word in the dictionary...
+                    let pw = prep_string(w);
+                    //let pw = w;
+                    let new_child_fodder = derive(get_map(pw), root_node.child_fodder); // derive it from the phrase if we can
+                    if (new_child_fodder != false) { // if we have derived something, add it as a child of the root node
+                        root_node.children.push(new ang_trie_node(root_node, pw, new_child_fodder));
+                    }
+                }
+                var root_node_time_spent = new Date().getTime() - root_node_start_time;
+                console.log("Root node created in", root_node_time_spent / 1000, "seconds.")
+
+                var tree_build_start_time = new Date().getTime();
+                root_node.recurse();
+                var tree_build_time_spent = new Date().getTime() - tree_build_start_time;
+                console.log("Tree built in", tree_build_time_spent / 1000, "seconds.")
+
+                var tree_walk_start_time = new Date().getTime();
+                anagrams = tree_to_anagrams(root_node, 1, max_words);
+                var tree_walk_time_spent = new Date().getTime() - tree_walk_start_time;
+                console.log("Tree walked in", tree_walk_time_spent / 1000, "seconds.")
+                
+                var total_time_spent = new Date().getTime() - start_time;
+
+                status = " ".concat("Found ", anagrams.length, " anagrams of <i>", phrase, "</i> in ", total_time_spent / 1000, " seconds.");
+                console.log(status);
+
+                document.getElementById("status").innerHTML = status;
+
+                let count = 0;
+                const max_print = 150000;
+
+                for (const a of anagrams) {
+                    // Create an "li" node:
+                    const node = document.createElement("li");
+
+                    // Append the text node to the "li" node:
+                    node.appendChild(document.createTextNode(a));
+                    document.getElementById("output_list").appendChild(node)
+                    count++;
+                    if(count > 150000) {
+                        const node = document.createElement("li");
+                        node.appendChild(document.createTextNode("[can't print more than 150,000 anagrams without crashing the browser]"));
+                        document.getElementById("output_list").appendChild(node)
+                        break;
+                    }
+                }
+            }
+
+            function setup() {
+                // make the button click if the user presses enter
+                let button = document.getElementById("user_input");
+                button.addEventListener("keyup", function(event) {
+                    event.preventDefault();
+                    if (event.keyCode === 13) {
+                        document.getElementById("find_button").click();
+                    }
+                });
+            }
+
+        </script>
+    </head>
+    <body onload = "setup()">
+        <div id = "everything">
+            <h1><i>Ang</i> anagram finder</h1>
+            <div id="form_part"><input type="text" id="user_input" placeholder="text here"></div>
+            <div id="form_part">Maximum number of words:
+                <select id="max_words_dropdown">
+                    <option value="unlimited">unlimited</option>
+                    <option value="5">5</option>
+                    <option value="4">4</option>
+                    <option value="3">3</option>
+                    <option value="2">2</option>
+                    <option value="1">1</option>
+                </select>
+            </div>
+            <div id="form_part">
+                <input type="button" value="Find anagrams!" id="find_button" onclick="button_click();">
+            </div>
+            <p id="status"></p>
+            <ul id="output_list"></ul>
+        </div>
+    </body>
+</html>
