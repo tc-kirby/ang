@@ -118,3 +118,41 @@ function tree_to_anagrams(root_node, depth, max_depth) {
 function prep_string(s) { // convert to lowercase and strip all non-alpha characters
     return s.toLowerCase().replace(/[^a-z]/gi, "");
 }
+
+// TODO: pass messages back as anagrams found rather than all at once
+self.onmessage = function (e) {
+    var start_time = new Date().getTime();
+    const worker_data = e.data;
+    
+    let root_node = new ang_trie_node(null, null, get_map(prep_string(worker_data.phrase))); // make the root node
+
+    // set up the root node
+    var root_node_start_time = new Date().getTime();
+    for (const w of worker_data.dict_words) { // for every word in the dictionary...
+        let pw = prep_string(w);
+        //let pw = w;
+        let new_child_fodder = derive(get_map(pw), root_node.child_fodder); // derive it from the phrase if we can
+        if (new_child_fodder != false) { // if we have derived something, add it as a child of the root node
+            root_node.children.push(new ang_trie_node(root_node, pw, new_child_fodder));
+        }
+    }
+    var root_node_time_spent = new Date().getTime() - root_node_start_time;
+    console.log("Root node created in", root_node_time_spent / 1000, "seconds.")
+
+    var tree_build_start_time = new Date().getTime();
+    root_node.recurse();
+    var tree_build_time_spent = new Date().getTime() - tree_build_start_time;
+    console.log("Tree built in", tree_build_time_spent / 1000, "seconds.")
+
+    var tree_walk_start_time = new Date().getTime();
+    anagrams = tree_to_anagrams(root_node, 1, worker_data.max_words);
+    var tree_walk_time_spent = new Date().getTime() - tree_walk_start_time;
+    console.log("Tree walked in", tree_walk_time_spent / 1000, "seconds.")
+    
+    var total_time_spent = new Date().getTime() - start_time;
+
+    var the_status = " ".concat("Found ", anagrams.length, " anagrams of <i>", worker_data.phrase, "</i> in ", total_time_spent / 1000, " seconds.");
+    console.log(the_status);
+
+    postMessage({anagrams: anagrams, total_seconds: total_time_spent / 1000, phrase: worker_data.phrase});
+}
