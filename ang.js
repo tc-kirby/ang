@@ -88,11 +88,14 @@ class ang_trie_node {
     }
 }
 
-function tree_to_anagrams(root_node, depth, max_depth) {
+function tree_to_anagrams(root_node, max_depth) { // non-recursive function using a stack to walk tree and find anagrams
     let anagrams = [];
-    
-    for (const n of root_node.children) {
-        //console.log("\t".repeat(depth), n.word, "(", map_to_string(n.fodder), ")")
+    let stack = [];
+
+    stack.push(root_node);
+
+    while(stack.length > 0) {
+        const n = stack.pop();
 
         if (n.fodder.size == 0) { // we found an anagram
             let buf = "";
@@ -105,14 +108,12 @@ function tree_to_anagrams(root_node, depth, max_depth) {
             anagrams.push(buf);
         }
 
-        if ((max_depth == null) || (depth < max_depth)) {
-            for (let a of tree_to_anagrams(n, depth + 1, max_depth)) {
-                anagrams.push(a);
-            }
+        for(child of n.children) {
+            stack.push(child);
         }
     }
 
-    return anagrams;
+    return(anagrams);
 }
 
 function prep_string(s) { // convert to lowercase and strip all non-alpha characters
@@ -123,6 +124,7 @@ function prep_string(s) { // convert to lowercase and strip all non-alpha charac
 self.onmessage = function (e) {
     var start_time = new Date().getTime();
     const worker_data = e.data;
+    const chunk_size = 100;
     
     let root_node = new ang_trie_node(null, null, get_map(prep_string(worker_data.phrase))); // make the root node
 
@@ -145,7 +147,8 @@ self.onmessage = function (e) {
     console.log("Tree built in", tree_build_time_spent / 1000, "seconds.")
 
     var tree_walk_start_time = new Date().getTime();
-    anagrams = tree_to_anagrams(root_node, 1, worker_data.max_words);
+    //anagrams = tree_to_anagrams(root_node, 1, worker_data.max_words);
+    anagrams = tree_to_anagrams(root_node, worker_data.max_words);
     var tree_walk_time_spent = new Date().getTime() - tree_walk_start_time;
     console.log("Tree walked in", tree_walk_time_spent / 1000, "seconds.")
     
@@ -154,5 +157,13 @@ self.onmessage = function (e) {
     var the_status = " ".concat("Found ", anagrams.length, " anagrams of <i>", worker_data.phrase, "</i> in ", total_time_spent / 1000, " seconds.");
     console.log(the_status);
 
-    postMessage({anagrams: anagrams, total_seconds: total_time_spent / 1000, phrase: worker_data.phrase});
+    anagrams.reverse();
+
+    // send back anagrams in chunks
+    for (let i = 0; i < anagrams.length; i += chunk_size) {
+        const chunk = anagrams.slice(i, i + chunk_size);
+        postMessage({anagrams: chunk, the_status: "results"});
+    }
+    
+    postMessage({n_anagrams: anagrams.length, total_seconds: total_time_spent / 1000, phrase: worker_data.phrase, the_status: "done"});
 }

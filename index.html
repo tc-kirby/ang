@@ -8,31 +8,37 @@
         <link href='https://fonts.googleapis.com/css?family=Abel' rel='stylesheet'>
 
         <script>
+            var maxed_out = false;
+
             function msg_from_worker(e) {
                 const worker_data = e.data;
 
-                document.getElementById("status").innerHTML = `Found ${worker_data.anagrams.length} anagrams of <i>${worker_data.phrase}</i> in ${worker_data.total_seconds} seconds.`;
+                if(worker_data.the_status == "results") {
+                    const max_print = 150000;
 
-                let count = 0;
-                const max_print = 150000;
+                    console.log(maxed_out);
 
-                for (const a of worker_data.anagrams) {
-                    // Create an "li" node:
-                    const node = document.createElement("div");
+                    if(!maxed_out) {
+                        for (const a of worker_data.anagrams) {
+                            const node = document.createElement("div");
+                            node.appendChild(document.createTextNode(a));
 
-                    // Append the text node to the "li" node:
-                    node.appendChild(document.createTextNode(a));
-                    document.getElementById("output_list").appendChild(node)
-                    count++;
-                    if(count > max_print) { // prevent crashes for long lists of results
-                        const node = document.createElement("li");
-                        node.appendChild(document.createTextNode(`[can't print more than ${max_print} anagrams without crashing the browser]`));
-                        document.getElementById("output_list").appendChild(node)
-                        break;
+                            const output_list = document.getElementById("output_list");
+                            output_list.appendChild(node);
+                        }
+
+                        if(output_list.getElementsByTagName('*').length > max_print) {
+                            maxed_out = true;
+                            const node = document.createElement("div");
+                            node.appendChild(document.createTextNode(`[can't display more than ${max_print} anagrams without crashing the browser]`));
+                            document.getElementById("output_list").appendChild(node)
+                        }
                     }
                 }
-
-                document.getElementById("find_button").disabled = false;
+                else if(worker_data.the_status == "done") {
+                    document.getElementById("status").innerHTML = `Found ${worker_data.n_anagrams} anagrams of <i>${worker_data.phrase}</i> in ${worker_data.total_seconds} seconds.`;
+                    document.getElementById("find_button").disabled = false;
+                }
             }
 
             function button_click() {
