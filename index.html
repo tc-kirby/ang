@@ -1,5 +1,6 @@
 <html>
     <head>
+        <title>Ang</title>
         <script src = "./ang.js"></script>
         <script src = "./dict.js"></script>
 
@@ -17,7 +18,7 @@
 
                 for (const a of worker_data.anagrams) {
                     // Create an "li" node:
-                    const node = document.createElement("li");
+                    const node = document.createElement("div");
 
                     // Append the text node to the "li" node:
                     node.appendChild(document.createTextNode(a));
@@ -73,11 +74,12 @@
 
         </script>
     </head>
+    
     <body onload = "setup()">
         <div id = "everything">
             <h1><i>Ang</i> anagram finder</h1>
-            <div id="form_part"><input type="text" id="user_input" placeholder="text here"></div>
-            <div id="form_part">Maximum number of words:
+            <div class="form_part"><input type="text" id="user_input" placeholder="text here"></div>
+            <div class="form_part">Maximum number of words:
                 <select id="max_words_dropdown">
                     <option value="unlimited">unlimited</option>
                     <option value="5">5</option>
@@ -87,11 +89,11 @@
                     <option value="1">1</option>
                 </select>
             </div>
-            <div id="form_part">
+            <div class="form_part">
                 <input type="button" value="Find anagrams!" id="find_button" onclick="button_click();">
             </div>
-            <p id="status"></p>
-            <ul id="output_list"></ul>
+            <div id="status"></div>
+            <div id="output_list"></div>
         </div>
     </body>
 </html>
