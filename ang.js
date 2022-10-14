@@ -52,11 +52,12 @@ function derive(needle, haystack) { // These arguments are maps (not strings!)
 }
 
 class ang_trie_node {
-    constructor(parent, word, fodder) { // parent node, word (string), fodder (map)
+    constructor(parent, word, fodder, depth) { // parent node, word (string), fodder (map)
         this.children = [];
         this.word = word;
         this.fodder = fodder;
         this.parent = parent;
+        this.depth = depth;
 
         if (this.word != null) { // if this is not the root node
             this.word_map = get_map(word);
@@ -72,7 +73,7 @@ class ang_trie_node {
             for (const sibling of this.parent.children) {
                 let new_child_fodder = derive(sibling.word_map, this.fodder);
                 if (new_child_fodder != false) {
-                    this.children.push(new ang_trie_node(this, sibling.word, new_child_fodder));
+                    this.children.push(new ang_trie_node(this, sibling.word, new_child_fodder, this.depth + 1));
                 }
             }
         }
@@ -99,17 +100,21 @@ function tree_to_anagrams(root_node, max_depth) { // non-recursive function usin
 
         if (n.fodder.size == 0) { // we found an anagram
             let buf = "";
-            // iterate back to the root of the tree, adding words to the buffer as we go
+            
             let current_node = n;
-            while (current_node.parent != null) {
-                buf = " ".concat(current_node.word, buf);
-                current_node = current_node.parent;
+            if(n.depth < max_depth || max_depth == null) { // don't print if too deep
+                while (current_node.parent != null) { // iterate back to the root of the tree, adding words to the buffer as we go
+                    buf = " ".concat(current_node.word, buf);
+                    current_node = current_node.parent;
+                }
+                anagrams.push(buf);
             }
-            anagrams.push(buf);
         }
 
-        for(child of n.children) {
-            stack.push(child);
+        if(n.depth < max_depth || max_depth == null) { // don't visit children if too deep
+            for(child of n.children) {
+                stack.push(child);
+            }
         }
     }
 
@@ -126,7 +131,7 @@ self.onmessage = function (e) {
     const worker_data = e.data;
     const chunk_size = 100;
     
-    let root_node = new ang_trie_node(null, null, get_map(prep_string(worker_data.phrase))); // make the root node
+    let root_node = new ang_trie_node(null, null, get_map(prep_string(worker_data.phrase)), 0); // make the root node
 
     // set up the root node
     var root_node_start_time = new Date().getTime();
@@ -135,7 +140,7 @@ self.onmessage = function (e) {
         //let pw = w;
         let new_child_fodder = derive(get_map(pw), root_node.child_fodder); // derive it from the phrase if we can
         if (new_child_fodder != false) { // if we have derived something, add it as a child of the root node
-            root_node.children.push(new ang_trie_node(root_node, pw, new_child_fodder));
+            root_node.children.push(new ang_trie_node(root_node, pw, new_child_fodder, 0));
         }
     }
     var root_node_time_spent = new Date().getTime() - root_node_start_time;
