@@ -86,7 +86,8 @@
 
                     if(!maxed_out) {
                         // Add results to queue instead of immediately rendering
-                        anagramQueue.push(...worker_data.anagrams);
+                        // Use concat for better performance with large arrays
+                        anagramQueue = anagramQueue.concat(worker_data.anagrams);
                         
                         // Start processing if not already running
                         if (!isProcessing) {
