@@ -17,12 +17,13 @@
             var renderedCount = 0;
             const max_print = 150000;
             const BATCH_SIZE = 15;
+            const FALLBACK_TIME_REMAINING = 5; // milliseconds for setTimeout fallback
 
             // Fallback for browsers that don't support requestIdleCallback
             const scheduleIdleCallback = window.requestIdleCallback || function(callback) {
                 return setTimeout(function() {
                     callback({
-                        timeRemaining: function() { return 5; },
+                        timeRemaining: function() { return FALLBACK_TIME_REMAINING; },
                         didTimeout: false
                     });
                 }, 1);
@@ -50,7 +51,7 @@
                     renderedCount++;
 
                     // Check if we've exceeded the max_print limit
-                    if(renderedCount > max_print) {
+                    if(renderedCount >= max_print) {
                         maxed_out = true;
                         const warningNode = document.createElement("div");
                         warningNode.appendChild(document.createTextNode(`[can't display more than ${max_print} anagrams without crashing the browser]`));
