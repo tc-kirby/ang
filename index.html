@@ -10,6 +10,7 @@
         <script>
             var maxed_out = false;
             var anagramQueue = [];
+            var queueIndex = 0;
             var isProcessing = false;
             var workerDone = false;
             var workerDoneData = null;
@@ -21,8 +22,8 @@
             const scheduleIdleCallback = window.requestIdleCallback || function(callback) {
                 return setTimeout(function() {
                     callback({
-                        timeRemaining: function() { return 0; },
-                        didTimeout: true
+                        timeRemaining: function() { return 5; },
+                        didTimeout: false
                     });
                 }, 1);
             };
@@ -37,11 +38,11 @@
 
                 // Process items while we have time and items in the queue
                 while ((deadline.timeRemaining() > 0 || deadline.didTimeout) && 
-                       anagramQueue.length > 0 && 
+                       queueIndex < anagramQueue.length && 
                        itemsProcessed < BATCH_SIZE &&
                        !maxed_out) {
                     
-                    const anagram = anagramQueue.shift();
+                    const anagram = anagramQueue[queueIndex++];
                     const node = document.createElement("div");
                     node.appendChild(document.createTextNode(anagram));
                     output_list.appendChild(node);
@@ -54,13 +55,13 @@
                         const warningNode = document.createElement("div");
                         warningNode.appendChild(document.createTextNode(`[can't display more than ${max_print} anagrams without crashing the browser]`));
                         output_list.appendChild(warningNode);
-                        // Clear remaining queue to stop processing
-                        anagramQueue = [];
+                        // Clear queue by resetting to end
+                        queueIndex = anagramQueue.length;
                     }
                 }
 
                 // If there are more items to process, schedule another callback
-                if (anagramQueue.length > 0 && !maxed_out) {
+                if (queueIndex < anagramQueue.length && !maxed_out) {
                     scheduleIdleCallback(processQueue);
                 } else {
                     // No more items in queue
@@ -98,7 +99,7 @@
                     workerDoneData = worker_data;
                     
                     // If queue is empty, finalize immediately
-                    if (anagramQueue.length === 0 && !isProcessing) {
+                    if (queueIndex >= anagramQueue.length && !isProcessing) {
                         document.getElementById("status").innerHTML = `Found ${worker_data.n_anagrams} anagrams of <i>${worker_data.phrase}</i> in ${worker_data.total_seconds} seconds.`;
                         document.getElementById("find_button").disabled = false;
                         workerDone = false;
@@ -113,6 +114,7 @@
 
                 // Reset state for new search
                 anagramQueue = [];
+                queueIndex = 0;
                 isProcessing = false;
                 workerDone = false;
                 workerDoneData = null;
