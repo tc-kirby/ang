@@ -9,41 +9,119 @@
 
         <script>
             var maxed_out = false;
+            var anagramQueue = [];
+            var queueIndex = 0;
+            var isProcessing = false;
+            var workerDone = false;
+            var workerDoneData = null;
+            var renderedCount = 0;
+            const max_print = 150000;
+            const BATCH_SIZE = 15;
+            const FALLBACK_TIME_REMAINING = 5; // milliseconds for setTimeout fallback
+
+            // Fallback for browsers that don't support requestIdleCallback
+            const scheduleIdleCallback = window.requestIdleCallback || function(callback) {
+                return setTimeout(function() {
+                    callback({
+                        timeRemaining: function() { return FALLBACK_TIME_REMAINING; },
+                        didTimeout: false
+                    });
+                }, 1);
+            };
+
+            const cancelIdleCallback = window.cancelIdleCallback || function(id) {
+                clearTimeout(id);
+            };
+
+            function processQueue(deadline) {
+                const output_list = document.getElementById("output_list");
+                let itemsProcessed = 0;
+
+                // Process items while we have time and items in the queue
+                while ((deadline.timeRemaining() > 0 || deadline.didTimeout) && 
+                       queueIndex < anagramQueue.length && 
+                       itemsProcessed < BATCH_SIZE &&
+                       !maxed_out) {
+                    
+                    const anagram = anagramQueue[queueIndex++];
+                    const node = document.createElement("div");
+                    node.appendChild(document.createTextNode(anagram));
+                    output_list.appendChild(node);
+                    itemsProcessed++;
+                    renderedCount++;
+
+                    // Check if we've exceeded the max_print limit
+                    if(renderedCount >= max_print) {
+                        maxed_out = true;
+                        const warningNode = document.createElement("div");
+                        warningNode.appendChild(document.createTextNode(`[can't display more than ${max_print} anagrams without crashing the browser]`));
+                        output_list.appendChild(warningNode);
+                        // Clear queue by resetting to end
+                        queueIndex = anagramQueue.length;
+                    }
+                }
+
+                // If there are more items to process, schedule another callback
+                if (queueIndex < anagramQueue.length && !maxed_out) {
+                    scheduleIdleCallback(processQueue);
+                } else {
+                    // No more items in queue
+                    isProcessing = false;
+                    
+                    // If worker is done and queue is empty, finalize
+                    if (workerDone && workerDoneData) {
+                        document.getElementById("status").innerHTML = `Found ${workerDoneData.n_anagrams} anagrams of <i>${workerDoneData.phrase}</i> in ${workerDoneData.total_seconds} seconds.`;
+                        document.getElementById("find_button").disabled = false;
+                        workerDone = false;
+                        workerDoneData = null;
+                    }
+                }
+            }
 
             function msg_from_worker(e) {
                 const worker_data = e.data;
 
                 if(worker_data.the_status == "results") {
-                    const max_print = 150000;
-
                     console.log(maxed_out);
 
                     if(!maxed_out) {
-                        for (const a of worker_data.anagrams) {
-                            const node = document.createElement("div");
-                            node.appendChild(document.createTextNode(a));
-
-                            const output_list = document.getElementById("output_list");
-                            output_list.appendChild(node);
-                        }
-
-                        if(output_list.getElementsByTagName('*').length > max_print) {
-                            maxed_out = true;
-                            const node = document.createElement("div");
-                            node.appendChild(document.createTextNode(`[can't display more than ${max_print} anagrams without crashing the browser]`));
-                            document.getElementById("output_list").appendChild(node)
+                        // Add results to queue instead of immediately rendering
+                        // Use concat for better performance with large arrays
+                        anagramQueue = anagramQueue.concat(worker_data.anagrams);
+                        
+                        // Start processing if not already running
+                        if (!isProcessing) {
+                            isProcessing = true;
+                            scheduleIdleCallback(processQueue);
                         }
                     }
                 }
                 else if(worker_data.the_status == "done") {
-                    document.getElementById("status").innerHTML = `Found ${worker_data.n_anagrams} anagrams of <i>${worker_data.phrase}</i> in ${worker_data.total_seconds} seconds.`;
-                    document.getElementById("find_button").disabled = false;
+                    workerDone = true;
+                    workerDoneData = worker_data;
+                    
+                    // If queue is empty, finalize immediately
+                    if (queueIndex >= anagramQueue.length && !isProcessing) {
+                        document.getElementById("status").innerHTML = `Found ${worker_data.n_anagrams} anagrams of <i>${worker_data.phrase}</i> in ${worker_data.total_seconds} seconds.`;
+                        document.getElementById("find_button").disabled = false;
+                        workerDone = false;
+                        workerDoneData = null;
+                    }
                 }
             }
 
             function button_click() {
                 var phrase = document.getElementById("user_input").value;
                 var mw_value = document.getElementById("max_words_dropdown").value;
+
+                // Reset state for new search
+                anagramQueue = [];
+                queueIndex = 0;
+                isProcessing = false;
+                workerDone = false;
+                workerDoneData = null;
+                maxed_out = false;
+                renderedCount = 0;
 
                 const ang_worker = new Worker('ang.js');
 
