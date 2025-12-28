@@ -17,22 +17,6 @@
             const BUFFER_SIZE = 20; // Number of extra items to render above/below viewport
             let scrollRAF = null;
             
-            const FALLBACK_TIME_REMAINING = 5; // milliseconds for setTimeout fallback
-
-            // Fallback for browsers that don't support requestIdleCallback
-            const scheduleIdleCallback = window.requestIdleCallback || function(callback) {
-                return setTimeout(function() {
-                    callback({
-                        timeRemaining: function() { return FALLBACK_TIME_REMAINING; },
-                        didTimeout: false
-                    });
-                }, 1);
-            };
-
-            const cancelIdleCallback = window.cancelIdleCallback || function(id) {
-                clearTimeout(id);
-            };
-            
             // Virtual scrolling function to render only visible items
             function updateVirtualScroll() {
                 const container = document.getElementById("output_container");
@@ -76,11 +60,6 @@
                     cancelAnimationFrame(scrollRAF);
                 }
                 scrollRAF = requestAnimationFrame(updateVirtualScroll);
-            }
-
-            function processQueue(deadline) {
-                // With virtual scrolling, we just update the display when new items arrive
-                updateVirtualScroll();
             }
 
             function msg_from_worker(e) {
