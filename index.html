@@ -8,15 +8,15 @@
         <link href='https://fonts.googleapis.com/css?family=Abel' rel='stylesheet'>
 
         <script>
-            var maxed_out = false;
             var anagramQueue = [];
-            var queueIndex = 0;
-            var isProcessing = false;
             var workerDone = false;
             var workerDoneData = null;
-            var renderedCount = 0;
-            const max_print = 150000;
-            const BATCH_SIZE = 15;
+            
+            // Virtual scrolling configuration
+            const ITEM_HEIGHT = 25; // Height of each anagram item in pixels
+            const BUFFER_SIZE = 20; // Number of extra items to render above/below viewport
+            let scrollRAF = null;
+            
             const FALLBACK_TIME_REMAINING = 5; // milliseconds for setTimeout fallback
 
             // Fallback for browsers that don't support requestIdleCallback
@@ -32,81 +32,74 @@
             const cancelIdleCallback = window.cancelIdleCallback || function(id) {
                 clearTimeout(id);
             };
+            
+            // Virtual scrolling function to render only visible items
+            function updateVirtualScroll() {
+                const container = document.getElementById("output_container");
+                const viewport = document.getElementById("output_viewport");
+                const spacer = document.getElementById("output_spacer");
+                
+                if (!container || !viewport || !spacer) return;
+                
+                const scrollTop = container.scrollTop;
+                const containerHeight = container.clientHeight;
+                
+                // Calculate total height needed for all items
+                const totalHeight = anagramQueue.length * ITEM_HEIGHT;
+                spacer.style.height = totalHeight + 'px';
+                
+                // Calculate which items should be visible
+                const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER_SIZE);
+                const endIndex = Math.min(
+                    anagramQueue.length,
+                    Math.ceil((scrollTop + containerHeight) / ITEM_HEIGHT) + BUFFER_SIZE
+                );
+                
+                // Clear and render only visible items
+                viewport.innerHTML = '';
+                
+                for (let i = startIndex; i < endIndex; i++) {
+                    const item = document.createElement('div');
+                    item.className = 'anagram-item';
+                    item.style.position = 'absolute';
+                    item.style.top = (i * ITEM_HEIGHT) + 'px';
+                    item.style.height = ITEM_HEIGHT + 'px';
+                    item.style.width = '100%';
+                    item.textContent = anagramQueue[i];
+                    viewport.appendChild(item);
+                }
+            }
+            
+            // Handle scroll events with requestAnimationFrame for smooth performance
+            function onScroll() {
+                if (scrollRAF) {
+                    cancelAnimationFrame(scrollRAF);
+                }
+                scrollRAF = requestAnimationFrame(updateVirtualScroll);
+            }
 
             function processQueue(deadline) {
-                const output_list = document.getElementById("output_list");
-                let itemsProcessed = 0;
-
-                // Process items while we have time and items in the queue
-                while ((deadline.timeRemaining() > 0 || deadline.didTimeout) && 
-                       queueIndex < anagramQueue.length && 
-                       itemsProcessed < BATCH_SIZE &&
-                       !maxed_out) {
-                    
-                    const anagram = anagramQueue[queueIndex++];
-                    const node = document.createElement("div");
-                    node.appendChild(document.createTextNode(anagram));
-                    output_list.appendChild(node);
-                    itemsProcessed++;
-                    renderedCount++;
-
-                    // Check if we've exceeded the max_print limit
-                    if(renderedCount >= max_print) {
-                        maxed_out = true;
-                        const warningNode = document.createElement("div");
-                        warningNode.appendChild(document.createTextNode(`[can't display more than ${max_print} anagrams without crashing the browser]`));
-                        output_list.appendChild(warningNode);
-                        // Clear queue by resetting to end
-                        queueIndex = anagramQueue.length;
-                    }
-                }
-
-                // If there are more items to process, schedule another callback
-                if (queueIndex < anagramQueue.length && !maxed_out) {
-                    scheduleIdleCallback(processQueue);
-                } else {
-                    // No more items in queue
-                    isProcessing = false;
-                    
-                    // If worker is done and queue is empty, finalize
-                    if (workerDone && workerDoneData) {
-                        document.getElementById("status").innerHTML = `Found ${workerDoneData.n_anagrams} anagrams of <i>${workerDoneData.phrase}</i> in ${workerDoneData.total_seconds} seconds.`;
-                        document.getElementById("find_button").disabled = false;
-                        workerDone = false;
-                        workerDoneData = null;
-                    }
-                }
+                // With virtual scrolling, we just update the display when new items arrive
+                updateVirtualScroll();
             }
 
             function msg_from_worker(e) {
                 const worker_data = e.data;
 
                 if(worker_data.the_status == "results") {
-                    console.log(maxed_out);
-
-                    if(!maxed_out) {
-                        // Add results to queue instead of immediately rendering
-                        // Use concat for better performance with large arrays
-                        anagramQueue = anagramQueue.concat(worker_data.anagrams);
-                        
-                        // Start processing if not already running
-                        if (!isProcessing) {
-                            isProcessing = true;
-                            scheduleIdleCallback(processQueue);
-                        }
-                    }
+                    // Add results to queue
+                    anagramQueue = anagramQueue.concat(worker_data.anagrams);
+                    
+                    // Update virtual scroll display
+                    updateVirtualScroll();
                 }
                 else if(worker_data.the_status == "done") {
                     workerDone = true;
                     workerDoneData = worker_data;
                     
-                    // If queue is empty, finalize immediately
-                    if (queueIndex >= anagramQueue.length && !isProcessing) {
-                        document.getElementById("status").innerHTML = `Found ${worker_data.n_anagrams} anagrams of <i>${worker_data.phrase}</i> in ${worker_data.total_seconds} seconds.`;
-                        document.getElementById("find_button").disabled = false;
-                        workerDone = false;
-                        workerDoneData = null;
-                    }
+                    // Update final status
+                    document.getElementById("status").innerHTML = `Found ${worker_data.n_anagrams} anagrams of <i>${worker_data.phrase}</i> in ${worker_data.total_seconds} seconds.`;
+                    document.getElementById("find_button").disabled = false;
                 }
             }
 
@@ -116,12 +109,8 @@
 
                 // Reset state for new search
                 anagramQueue = [];
-                queueIndex = 0;
-                isProcessing = false;
                 workerDone = false;
                 workerDoneData = null;
-                maxed_out = false;
-                renderedCount = 0;
 
                 const ang_worker = new Worker('ang.js');
 
@@ -138,7 +127,12 @@
                 }
 
                 document.getElementById("status").innerHTML = the_status; // set placeholder status while we work...
-                document.getElementById("output_list").innerHTML = ""; // clear the output list space
+                
+                // Clear the virtual scroll container
+                const viewport = document.getElementById("output_viewport");
+                const spacer = document.getElementById("output_spacer");
+                if (viewport) viewport.innerHTML = "";
+                if (spacer) spacer.style.height = "0px";
 
                 document.getElementById("find_button").disabled = true;
 
@@ -154,6 +148,12 @@
                         document.getElementById("find_button").click();
                     }
                 });
+                
+                // Set up scroll listener for virtual scrolling
+                const container = document.getElementById("output_container");
+                if (container) {
+                    container.addEventListener("scroll", onScroll);
+                }
             }
 
         </script>
@@ -177,7 +177,11 @@
                 <input type="button" value="Find anagrams!" id="find_button" onclick="button_click();">
             </div>
             <div id="status"></div>
-            <div id="output_list"></div>
+            <div id="output_container">
+                <div id="output_spacer">
+                    <div id="output_viewport"></div>
+                </div>
+            </div>
         </div>
     </body>
 </html>
