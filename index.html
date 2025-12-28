@@ -66,8 +66,8 @@
                 const worker_data = e.data;
 
                 if(worker_data.the_status == "results") {
-                    // Add results to queue (using push with spread operator for better performance)
-                    anagramQueue.push(...worker_data.anagrams);
+                    // Add results to queue
+                    anagramQueue = anagramQueue.concat(worker_data.anagrams);
                     
                     // Update virtual scroll display
                     updateVirtualScroll();
