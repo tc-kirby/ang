@@ -1,3 +1,14 @@
+html {
+    overflow: hidden;
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}
+
 body, select, input {
     font-family: 'Abel';font-size: 22px;
 }
@@ -9,6 +20,13 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+body::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
 }
 
 #everything {
