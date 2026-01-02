@@ -24,14 +24,10 @@ input {
     margin: 10px auto;
     max-width: 800px;
     position: relative;
+    contain: paint;
 }
 
 #output_spacer {
-    position: relative;
-    width: 100%;
-}
-
-#output_viewport {
     position: relative;
     width: 100%;
 }
