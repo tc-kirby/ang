@@ -6,23 +6,36 @@ input {
     font-family: 'Abel';font-size: 22px;
 }
 
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
 #everything {
     width: 100%;
     text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .form_part {
     padding: 5px;
 }
 
+#status {
+    padding: 10px;
+}
+
 /* Virtual scroll container styles */
 #output_container {
-    height: 600px;
-    overflow-y: scroll;
+    flex: 1;
+    overflow-y: auto;
     overflow-x: hidden;
-    border: 1px solid #ccc;
-    margin: 10px auto;
-    max-width: 800px;
+    margin: 0;
     position: relative;
     contain: paint;
 }
@@ -34,8 +47,10 @@ input {
 
 .anagram-item {
     box-sizing: border-box;
-    padding: 2px 10px;
+    padding: 5px 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
+    line-height: 30px;
 }
