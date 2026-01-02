@@ -54,9 +54,9 @@ Then open your browser to: `http://localhost:8080`
 
 - Fast anagram generation using a tree-based algorithm
 - Web Worker for non-blocking computation
-- Incremental rendering with `requestIdleCallback` to keep browser responsive
+- Virtual scrolling for efficient rendering of large result sets
+- Can display 1M+ anagrams without performance issues
 - Limit results by maximum number of words
-- Displays up to 150,000 anagrams before stopping (to prevent browser crashes)
 
 ## How It Works
 
