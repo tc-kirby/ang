@@ -2,10 +2,6 @@ body, select, input {
     font-family: 'Abel';font-size: 22px;
 }
 
-input {
-    font-family: 'Abel';font-size: 22px;
-}
-
 body {
     margin: 0;
     padding: 0;
@@ -33,7 +29,7 @@ body {
 /* Virtual scroll container styles */
 #output_container {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: scroll;
     overflow-x: hidden;
     margin: 0;
     position: relative;
