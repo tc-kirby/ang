@@ -8,6 +8,7 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 #everything {
@@ -29,11 +30,18 @@ body {
 /* Virtual scroll container styles */
 #output_container {
     flex: 1;
-    overflow-y: scroll;
+    overflow-y: auto;
     overflow-x: hidden;
     margin: 0;
     position: relative;
     contain: paint;
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+#output_container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
 }
 
 #output_spacer {
